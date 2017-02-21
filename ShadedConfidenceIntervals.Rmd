@@ -1,0 +1,55 @@
+---
+title: "Shaded Confidence Intervals"
+author: "Nikolai Klibansky"
+date: "February 21, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+require(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+First let's generate two data sets with overlapping confidence intervals.
+
+```{r generateData}
+x <- rnorm(30,mean=10)
+y1 <- 0+2*x+rnorm(length(x))
+y2 <- 0.5+2*x+rnorm(length(x))
+
+lm1 <- lm(y1~x)
+lm2 <- lm(y2~x)
+
+n.pred <- 100
+x.pred <- seq(min(x),max(x),length=n.pred)
+y1.pred <- predict(lm1,interval="confidence",newdata=list("x"=x.pred))
+y2.pred <- predict(lm2,interval="confidence",newdata=list("x"=x.pred))
+
+```
+
+Now let's plot the data, fitted lines, and then translucent confidence intervals with `rgb()` with an `alpha` less than zero. Where the CI overlap, the shaded area is automatically a combination of the other two translucent colors
+
+```{r plots}
+col1.opaque <- rgb(1,0,0,alpha=1) # solid red
+col2.opaque <- rgb(0,0,1,alpha=1) # solid blue
+
+trans.alpha <- 0.25
+
+col1.trans <- rgb(1,0,0,alpha=trans.alpha) # translucent red
+col2.trans <- rgb(0,0,1,alpha=trans.alpha) # translucent blue
+
+
+# Plot observations
+plot(x,y1,pch=16,col=col1.opaque,ylim=range(c(y1,y2,y1.pred,y2.pred)))
+points(x,y2,pch=16,col=col2.opaque)
+
+# Plot fitted lines
+points(x.pred,y1.pred[,"fit"],type="l",col=col1.opaque)
+points(x.pred,y2.pred[,"fit"],type="l",col=col2.opaque)
+
+# Confidence intervals
+polygon(c(x.pred,rev(x.pred)), c(y1.pred[,"lwr"],rev(y1.pred[,"upr"])),col=col1.trans,border=NA)
+polygon(c(x.pred,rev(x.pred)), c(y2.pred[,"lwr"],rev(y2.pred[,"upr"])),col=col2.trans,border=NA)
+```
+
+NOTE the `rev()` function above is used to reverse the order of the x and y values for the second confidence band, so that the confidence polygon plots as a closed shape.
